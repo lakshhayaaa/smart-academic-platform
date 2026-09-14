@@ -42,6 +42,9 @@ def detect_resource_type(text):
     if "question paper" in text or "assessment test" in text:
         return "PYQ"
 
+    if "ca test" in text or "continuous assessment" in text:
+        return "PYQ"
+
     if "ppt" in text or "presentation" in text or "slides" in text:
         return "PPT"
 
@@ -53,12 +56,39 @@ def detect_resource_type(text):
 
 def detect_course_code(text):
 
-    pattern = r"\b\d{2}[A-Z]\d{3}\b"
+    # Normal format: 19N401
+    normal_pattern = r"\b\d{2}[A-Z]\d{3}\b"
 
-    match = re.search(pattern, text)
+    match = re.search(normal_pattern, text)
 
     if match:
-        return match.group()
+        return match.group().upper()
+
+    # OCR may read 19N401 as 19ON401
+    # Remove the extra O between the first two digits and N/M/letter.
+    ocr_pattern = r"\b(\d{2})O([A-Z])(\d{3})\b"
+
+    match = re.search(ocr_pattern, text, re.IGNORECASE)
+
+    if match:
+        return (
+            match.group(1)
+            + match.group(2).upper()
+            + match.group(3)
+        )
+
+    # OCR may read 19N401 as 1ON401
+    ocr_pattern_2 = r"\b(\d)O([A-Z])(\d{3})\b"
+
+    match = re.search(ocr_pattern_2, text, re.IGNORECASE)
+
+    if match:
+        return (
+            match.group(1)
+            + "9"
+            + match.group(2).upper()
+            + match.group(3)
+        )
 
     return None
 
