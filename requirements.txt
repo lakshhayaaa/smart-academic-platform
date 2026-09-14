@@ -1,0 +1,6 @@
+PyMuPDF
+python-pptx
+pytesseract
+Pillow
+python-multipart
+SQLAlchemy
