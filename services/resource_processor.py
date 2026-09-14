@@ -3,6 +3,8 @@ from services.file_processor import process_pdf
 from services.text_extractor import extract_ppt_text
 from services.quality_checker import check_quality
 from services.duplicate_checker import calculate_file_hash
+from services.semester_detector import detect_semester
+
 from services.auto_tager import (
     detect_course_code,
     detect_unit,
@@ -38,6 +40,7 @@ def process_resource(file_path):
     course_code = detect_course_code(text)
     unit = detect_unit(text)
     resource_type = detect_resource_type(text)
+    semester = detect_semester(text)
 
     # 6. Return all processed information
     return {
@@ -45,6 +48,7 @@ def process_resource(file_path):
         "file_hash": file_hash,
         "course_code": course_code,
         "unit": unit,
+        "semester": semester,
         "resource_type": resource_type,
         "text": text
     }
