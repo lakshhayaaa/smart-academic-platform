@@ -4,9 +4,11 @@ from models.user import User
 from models.department import Department
 from models.regulation import Regulation
 
-from schemas.auth import SignUpRequest
+from schemas.auth import SignUpRequest,SignInRequest
 from utils.academic_dept import get_department_code
-from utils.security import hash_password
+from utils.security import hash_password,verify_password, revoke_token, decode_access_token,generate_jwt_token as create_access_token
+import os
+
 
 def signup_user(data:SignUpRequest,db:Session):
 
@@ -34,7 +36,7 @@ def signup_user(data:SignUpRequest,db:Session):
         raise ValueError("Roll number already registered")
 
     existing_email=db.query(User).filter(
-        User.college_email==data.college_email
+        User.college_email==data.email
     ).first()
 
     if existing_email:
@@ -45,7 +47,7 @@ def signup_user(data:SignUpRequest,db:Session):
     user=User(
         roll_no=data.roll_no,
         name=data.name,
-        college_email=data.college_email,
+        college_email=data.email,
         password_hash=hashed_password,
         department_code=department_code,
         regulation_year=data.regulation_year
@@ -56,3 +58,22 @@ def signup_user(data:SignUpRequest,db:Session):
     db.refresh(user)
 
     return user
+
+def signin_user(data:SignInRequest,db:Session):
+    user=db.query(User).filter(
+        User.college_email==data.email
+    ).first()
+
+    if not user:
+        raise ValueError("User not found")
+
+    if not verify_password(data.password,user.password_hash):
+        raise ValueError("Incorrect password")
+
+    token=create_access_token(user.roll_no)
+    return token
+
+def signout_user(token:str):
+    payload = decode_access_token(token)
+    revoke_token(payload)
+    return {"message": "Logout successful"}

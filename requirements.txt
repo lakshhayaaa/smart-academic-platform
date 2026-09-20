@@ -4,3 +4,5 @@ pytesseract
 Pillow
 python-multipart
 SQLAlchemy
+jwt
+redis
