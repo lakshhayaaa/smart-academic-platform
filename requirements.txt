@@ -4,5 +4,12 @@ pytesseract
 Pillow
 python-multipart
 SQLAlchemy
+fastapi
+uvicorn
+python-dotenv
+psycopg[binary]
+bcrypt
+pydantic
+email-validator
 jwt
 redis
