@@ -11,3 +11,5 @@ psycopg[binary]
 bcrypt
 pydantic
 email-validator
+jwt
+redis
