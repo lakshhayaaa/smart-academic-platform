@@ -5,6 +5,8 @@ from models.resouce import Resource
 from models.download import Download
 from models.rating import Rating
 from models.comment import Comment
+from models.subjects import Subject
+from models.unit import Unit
 
 
 def get_resource_score(resource_id: int, db: Session):
@@ -70,9 +72,29 @@ def rank_resources(
     ranked_resources = []
 
     for resource in resources:
+
         ranking = get_resource_score(
             resource.resource_id,
             db
+        )
+
+        # Find subject information
+        subject = (
+            db.query(Subject)
+            .filter(
+                Subject.course_code == resource.course_code
+            )
+            .first()
+        )
+
+        # Find unit information
+        unit = (
+            db.query(Unit)
+            .filter(
+                Unit.course_code == resource.course_code,
+                Unit.unit_number == resource.unit_number
+            )
+            .first()
         )
 
         ranked_resources.append({
@@ -80,6 +102,10 @@ def rank_resources(
             "title": resource.title,
             "course_code": resource.course_code,
             "unit_number": resource.unit_number,
+            "unit_name": unit.unit_name if unit else None,
+            "course_name": subject.course_name if subject else None,
+            "regulation_year": subject.regulation_year if subject else None,
+            "semester": None,
             "resource_type": resource.resource_type,
             "status": resource.status,
             "created_at": resource.created_at,
