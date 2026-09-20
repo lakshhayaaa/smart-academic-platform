@@ -1,23 +1,16 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import (
-    BigInteger,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    func
-)
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
 
 
-class Rating(Base):
-    __tablename__ = "ratings"
+class Comment(Base):
+    __tablename__ = "comments"
 
-    rating_id: Mapped[int] = mapped_column(
+    comment_id: Mapped[int] = mapped_column(
         BigInteger,
         primary_key=True,
         autoincrement=True
@@ -41,8 +34,8 @@ class Rating(Base):
         nullable=True
     )
 
-    rating: Mapped[int] = mapped_column(
-        Integer,
+    comment: Mapped[str] = mapped_column(
+        Text,
         nullable=False
     )
 

@@ -49,7 +49,7 @@ def detect_resource_type(text):
         return "PPT"
 
     if "notes" in text or "lecture notes" in text:
-        return "Notes"
+        return "NOTES"
 
     return None
 

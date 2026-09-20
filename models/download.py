@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -30,7 +31,7 @@ class Download(Base):
         nullable=False
     )
 
-    roll_no: Mapped[str | None] = mapped_column(
+    roll_no: Mapped[Optional[str]] = mapped_column(
         String(30),
         ForeignKey(
             "users.roll_no",
