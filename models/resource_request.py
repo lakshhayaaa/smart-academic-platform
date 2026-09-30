@@ -2,6 +2,8 @@ from datetime import datetime
 
 from sqlalchemy import BigInteger, String, DateTime, ForeignKey,ForeignKeyConstraint, SmallInteger, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
+from models.resource_type import ResourceType
+from models.unit import Unit
 
 from database import Base
 
@@ -54,7 +56,7 @@ class ResourceRequest(Base):
         server_default=func.now()
     )
 
-    table_args = (
+    __table_args__ = (
         ForeignKeyConstraint(
             ["course_code", "unit_number"],
             ["units.course_code", "units.unit_number"],

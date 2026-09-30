@@ -44,7 +44,8 @@ def generate_jwt_token(roll_no: str) -> str:
 def decode_access_token(token: str) -> dict:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
+    except JWTError as e:
+        print(f"JWTError: {e}")
         raise ValueError("Invalid or expired token")
     
 #check if the token is revoked by checking if the token exists in redis, if it exists then it is revoked
