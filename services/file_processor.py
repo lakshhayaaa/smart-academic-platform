@@ -1,57 +1,70 @@
-import os
-import tempfile
+import io
 
 import fitz
 from PIL import Image
 
-from services.text_extractor import extract_pdf_text
+from services.text_extractor import (
+    extract_pdf_text,
+    extract_docx_text,
+    extract_ppt_text
+)
 from services.ocr_service import extract_ocr_text
 
 
-def process_pdf(file_path):
+def process_file(filename: str, file_bytes: bytes) -> str:
 
-    text = extract_pdf_text(file_path)
+    extension = "." + filename.lower().rsplit(".", 1)[-1]
 
-    if len(text.strip()) > 100:
-        return text
+    # PDF
+    if extension == ".pdf":
 
-    document = fitz.open(file_path)
+        text = extract_pdf_text(file_bytes)
 
-    full_text = ""
+        # Normal PDF with selectable text
+        if len(text.strip()) > 100:
+            return text
 
-    for page in document:
-
-        pixmap = page.get_pixmap(
-            dpi=200,
-            colorspace=fitz.csRGB,
-            alpha=False
+        # Scanned PDF → OCR
+        document = fitz.open(
+            stream=file_bytes,
+            filetype="pdf"
         )
 
-        image = Image.frombytes(
-            "RGB",
-            [pixmap.width, pixmap.height],
-            pixmap.samples
-        )
+        full_text = ""
 
-        temp_file = tempfile.NamedTemporaryFile(
-            suffix=".png",
-            delete=False
-        )
+        for page in document:
 
-        image_path = temp_file.name
-        temp_file.close()
+            pixmap = page.get_pixmap(
+                dpi=200,
+                colorspace=fitz.csRGB,
+                alpha=False
+            )
 
-        try:
-            image.save(image_path)
+            image = Image.frombytes(
+                "RGB",
+                [pixmap.width, pixmap.height],
+                pixmap.samples
+            )
 
-            page_text = extract_ocr_text(image_path)
+            image_buffer = io.BytesIO()
+            image.save(image_buffer, format="PNG")
+
+            page_text = extract_ocr_text(
+                image_buffer.getvalue()
+            )
 
             full_text += page_text + "\n"
 
-        finally:
-            if os.path.exists(image_path):
-                os.remove(image_path)
+        document.close()
 
-    document.close()
+        return full_text
 
-    return full_text
+    # DOCX
+    elif extension == ".docx":
+        return extract_docx_text(file_bytes)
+
+    # PPTX
+    elif extension == ".pptx":
+        return extract_ppt_text(file_bytes)
+
+    return ""

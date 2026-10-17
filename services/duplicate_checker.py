@@ -3,19 +3,13 @@ from sqlalchemy.orm import Session
 from models.resouce import Resource
 
 
-def calculate_file_hash(file_path):
 
-    sha256 = hashlib.sha256()
-
-    with open(file_path, "rb") as file:
-
-        while chunk := file.read(4096):
-            sha256.update(chunk)
-
-    return sha256.hexdigest()
+def calculate_file_hash(file_bytes: bytes)-> str:
+    return hashlib.sha256(file_bytes).hexdigest()
 
 
-def is_duplicate(file_hash, db: Session):
+
+def is_duplicate(file_hash:str, db: Session):
 
     existing_resource = (
         db.query(Resource)
