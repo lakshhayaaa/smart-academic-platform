@@ -1,17 +1,10 @@
 import os
 
 
-ALLOWED_EXTENSIONS = [".pdf", ".pptx"]
+ALLOWED_EXTENSIONS = [".pdf", ".pptx",".docx"]
 
 
-def validate_file(file_path):
+def validate_file(filename: str) -> bool:
+    extension = "." + filename.lower().rsplit(".", 1)[-1]
 
-    if not os.path.exists(file_path):
-        return False
-
-    extension = os.path.splitext(file_path)[1].lower()
-
-    if extension not in ALLOWED_EXTENSIONS:
-        return False
-
-    return True
+    return extension in ALLOWED_EXTENSIONS
