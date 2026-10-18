@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 class ResourceRequestCreate(BaseModel):
@@ -7,6 +7,8 @@ class ResourceRequestCreate(BaseModel):
     resource_type: str
 
 class ResourceRequestResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     request_id: int
     requested_by: str
     course_code: str
