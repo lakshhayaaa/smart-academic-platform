@@ -83,7 +83,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onClose, onLo
   return (
     <>
       <aside
-        className={`hidden h-screen shrink-0 bg-slate-950 text-white transition-[width] duration-200 lg:block ${
+        className={`hidden h-full shrink-0 bg-slate-950 text-white transition-[width] duration-200 lg:block ${
           collapsed ? 'w-[4.5rem]' : 'w-64'
         }`}
       >
