@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -27,7 +28,7 @@ export default function AppShell() {
     : titles[location.pathname] || 'ScholarShare'
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-dvh overflow-hidden bg-slate-50">
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((value) => !value)}
@@ -35,9 +36,14 @@ export default function AppShell() {
         onClose={() => setMobileOpen(false)}
         onLogout={logout}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar title={title} onMenu={() => setMobileOpen(true)} />
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+        <TopBar
+          title={title}
+          onMenu={() => setMobileOpen(true)}
+        />
+
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
