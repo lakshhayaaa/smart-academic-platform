@@ -11,7 +11,8 @@ psycopg[binary]
 bcrypt
 pydantic
 email-validator
-jwt
+PyJWT==2.10.1
 redis
 supabase
 python-docx
+python-jose

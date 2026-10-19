@@ -6,6 +6,7 @@ from mimetypes import guess_type
 from sqlalchemy.orm import Session
 
 from models.resouce import Resource
+from models.resource_request import ResourceRequest
 from services.resource_processor import process_resource
 from services.academic_service import validate_academic_selection
 from supabase_client import supabase
@@ -29,7 +30,7 @@ def upload_resource(
     uploaded_by: str,
     db: Session,
 ):
-    """Validate, upload, and save a learning resource."""
+    """Validate, upload, save, and fulfill matching requests."""
 
     # 1. Validate required input.
     if not title or not title.strip():
@@ -70,8 +71,7 @@ def upload_resource(
             "message": "Upload a PDF, PPTX, or DOCX file.",
         }
 
-    # 4. Process the file, detect duplicates,
-    #    extract text, and check readability.
+    # 4. Process the file and detect duplicates.
     try:
         result = process_resource(
             safe_filename,
@@ -91,7 +91,6 @@ def upload_resource(
 
     if result.get("error"):
         error = result["error"]
-
         return {
             "success": False,
             "error": error,
@@ -130,8 +129,7 @@ def upload_resource(
         storage_uploaded = True
         print("UPLOAD DEBUG: Storage upload successful")
 
-        # 7. Save metadata only after Storage succeeds.
-        #    ACCEPTED means the complete upload succeeded.
+        # 7. Create the resource record.
         stage = "PostgreSQL insert and commit"
 
         resource = Resource(
@@ -146,16 +144,41 @@ def upload_resource(
         )
 
         db.add(resource)
-        db.commit()
 
+        # Generate the resource ID before linking requests.
+        db.flush()
+
+        # 8. Fulfill matching requests from other students.
+        stage = "Matching resource requests"
+
+        matching_requests = (
+            db.query(ResourceRequest)
+            .filter(
+                ResourceRequest.course_code == resource.course_code,
+                ResourceRequest.unit_number == resource.unit_number,
+                ResourceRequest.resource_type == resource.resource_type,
+                ResourceRequest.requested_by != uploaded_by,
+                ResourceRequest.status.in_(["OPEN", "PENDING"]),
+            )
+            .all()
+        )
+
+        for request in matching_requests:
+            request.status = "FULFILLED"
+            request.fulfilled_resource_id = resource.resource_id
+
+        print(
+            "UPLOAD DEBUG: Matching requests fulfilled:",
+            len(matching_requests),
+        )
+
+        # Save the resource and request updates together.
+        db.commit()
         print("UPLOAD DEBUG: Database commit successful")
 
-        # 8. Refresh the saved record.
+        # 9. Refresh the saved resource.
         stage = "Database refresh"
-
         db.refresh(resource)
-
-        print("UPLOAD DEBUG: Database refresh successful")
 
         return {
             "success": True,
@@ -175,7 +198,7 @@ def upload_resource(
             repr(exc),
         )
 
-        # 9. Remove the uploaded file if saving metadata failed.
+        # Remove the Storage file if the database operation failed.
         if storage_uploaded:
             try:
                 supabase.storage.from_(BUCKET_NAME).remove(

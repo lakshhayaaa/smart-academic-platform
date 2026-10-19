@@ -32,7 +32,7 @@ from schemas.resources import (
 )
 from services.resource_service import upload_resource as save_resource
 from utils.dependencies import get_current_user
-
+from services.ranking import get_resource_score
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
 
@@ -71,6 +71,7 @@ def create_signed_url(file_path: str) -> str:
 # 1. SEARCH RESOURCES
 # =========================================================
 
+
 @router.get("/search")
 def search_resources(
     q: str | None = Query(default=None, max_length=100),
@@ -83,14 +84,9 @@ def search_resources(
     current_user=Depends(get_current_user),
 ):
     """
-    Search accepted resources.
-
-    Optional filters:
-    - q: matches resource title or course code
-    - course_code: filters by course
-    - unit_number: filters by unit
-    - resource_type: PPT, NOTES, or PYQ
-    - limit and offset: pagination
+    Search accepted resources and return them in ranking order.
+    Supports keyword search, course, unit, resource type,
+    and pagination.
     """
 
     query = (
@@ -105,6 +101,7 @@ def search_resources(
         .filter(Resource.status == "ACCEPTED")
     )
 
+    # Keyword search
     if q and q.strip():
         keyword = f"%{q.strip()}%"
         query = query.filter(
@@ -114,35 +111,36 @@ def search_resources(
             )
         )
 
+    # Course filter
     if course_code and course_code.strip():
         query = query.filter(
             Resource.course_code.ilike(course_code.strip())
         )
 
+    # Unit filter
     if unit_number is not None:
         query = query.filter(
             Resource.unit_number == unit_number
         )
 
+    # Resource type filter
     if resource_type is not None:
         query = query.filter(
             Resource.resource_type == resource_type.value
         )
 
-    total = query.count()
+    # Get all matching resources before pagination
+    results = query.all()
 
-    results = (
-        query
-        .order_by(Resource.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-
-    items = []
+    ranked_results = []
 
     for resource, unit_name in results:
-        items.append({
+        ranking = get_resource_score(
+            resource.resource_id,
+            db,
+        )
+
+        ranked_results.append({
             "resource_id": resource.resource_id,
             "title": resource.title,
             "course_code": resource.course_code,
@@ -151,7 +149,24 @@ def search_resources(
             "resource_type": resource.resource_type,
             "status": resource.status,
             "created_at": resource.created_at,
+            "score": ranking["score"],
+            "download_count": ranking["download_count"],
+            "average_rating": ranking["average_rating"],
+            "comment_count": ranking["comment_count"],
         })
+
+    # Highest score first; newest first for ties
+    ranked_results.sort(
+        key=lambda resource: (
+            resource["score"],
+            resource["created_at"],
+        ),
+        reverse=True,
+    )
+
+    # Paginate after ranking
+    total = len(ranked_results)
+    items = ranked_results[offset:offset + limit]
 
     return {
         "total": total,
@@ -159,6 +174,7 @@ def search_resources(
         "offset": offset,
         "items": items,
     }
+
 
 
 # =========================================================
@@ -540,6 +556,7 @@ def delete_resource(
 # 6. RATE A RESOURCE
 # =========================================================
 
+
 @router.post("/{resource_id}/rate")
 def rate_resource(
     resource_id: int,
@@ -571,22 +588,34 @@ def rate_resource(
         .first()
     )
 
-    if existing_rating:
-        raise HTTPException(
-            status_code=409,
-            detail="You have already rated this resource",
+    try:
+        if existing_rating:
+            # Update the user's existing rating
+            existing_rating.rating = data.rating
+
+            db.commit()
+            db.refresh(existing_rating)
+
+            return {
+                "message": "Rating updated successfully",
+                "rating_id": existing_rating.rating_id,
+            }
+
+        # Create a new rating if one doesn't exist
+        new_rating = Rating(
+            resource_id=resource_id,
+            roll_no=current_user.roll_no,
+            rating=data.rating,
         )
 
-    new_rating = Rating(
-        resource_id=resource_id,
-        roll_no=current_user.roll_no,
-        rating=data.rating,
-    )
-
-    try:
         db.add(new_rating)
         db.commit()
         db.refresh(new_rating)
+
+        return {
+            "message": "Rating added successfully",
+            "rating_id": new_rating.rating_id,
+        }
 
     except Exception as exc:
         db.rollback()
@@ -595,8 +624,3 @@ def rate_resource(
             status_code=500,
             detail="Could not save rating",
         )
-
-    return {
-        "message": "Rating added successfully",
-        "rating_id": new_rating.rating_id,
-    }

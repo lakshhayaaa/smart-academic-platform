@@ -1,6 +1,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from database import get_db
 from utils.dependencies import get_current_user
@@ -64,8 +65,25 @@ def get_dashboard(
         )
 
         # 2. RECENTLY VIEWED RESOURCES
-        viewed_query = (
+        # Find the latest view timestamp for each resource
+        # viewed by the current student.
+        latest_views = (
+            db.query(
+                View.resource_id.label("resource_id"),
+                func.max(View.viewed_at).label("latest_viewed_at"),
+            )
+            .filter(View.roll_no == roll_no)
+            .group_by(View.resource_id)
+            .subquery()
+        )
+
+        recent_views = (
             db.query(View, Resource, Unit.unit_name)
+            .join(
+                latest_views,
+                (View.resource_id == latest_views.c.resource_id)
+                & (View.viewed_at == latest_views.c.latest_viewed_at),
+            )
             .join(
                 Resource,
                 Resource.resource_id == View.resource_id,
@@ -79,11 +97,7 @@ def get_dashboard(
                 View.roll_no == roll_no,
                 Resource.status == "ACCEPTED",
             )
-        )
-
-        recent_views = (
-            viewed_query
-            .order_by(View.viewed_at.desc())
+            .order_by(View.viewed_at.desc(), View.view_id.desc())
             .limit(RECENT_LIMIT)
             .all()
         )
