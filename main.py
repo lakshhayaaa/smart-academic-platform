@@ -18,7 +18,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://smart-academic-platform-woad.vercel.app"
+        "https://smart-academic-platform-woad.vercel.app",
+        "https://smart-academic-platform-pa0mf0nbp-24n224-9179s-projects.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
